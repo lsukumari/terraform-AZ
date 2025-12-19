@@ -1,0 +1,51 @@
+name: App service - Build, Push & Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  app-cicd:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.CLIENT_ID }}",
+              "clientSecret": "${{ secrets.CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.TENANT_ID }}"
+            }
+
+      - name: ACR Login
+        run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER }}
+
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/myapp:latest ./src
+
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/myapp:latest
+
+      - name: Deploy Image to Azure App Service
+        run: |
+          az webapp config container set \
+            --name webapp-dev \
+            --resource-group terraform-rg \
+            --docker-custom-image-name ${{ secrets.ACR_LOGIN_SERVER }}/myapp:latest \
+            --docker-registry-server-url https://${{ secrets.ACR_LOGIN_SERVER }} \
+            --docker-registry-server-user ${{ secrets.CLIENT_ID }} \
+            --docker-registry-server-password ${{ secrets.CLIENT_SECRET }}
+
+      - name: Restart App Service
+        run: |
+          az webapp restart \
+            --name webapp-dev \
+            --resource-group terraform-rg
