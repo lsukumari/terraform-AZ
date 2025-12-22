@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  plan:
+  terraform-plan:
     runs-on: ubuntu-latest
 
     defaults:
@@ -12,15 +12,23 @@ jobs:
         working-directory: env
 
     steps:
-
+      # -------------------------------
+      # Checkout repository
+      # -------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # -------------------------------
+      # Install Terraform
+      # -------------------------------
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.6
 
+      # -------------------------------
+      # Login to Azure using SPN
+      # -------------------------------
       - name: Azure Login
         uses: azure/login@v1
         with:
@@ -32,6 +40,9 @@ jobs:
               "tenantId": "${{ secrets.TENANT_ID }}"
             }
 
+      # -------------------------------
+      # Terraform Init (Remote Backend)
+      # -------------------------------
       - name: Terraform Init
         env:
           ARM_SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
@@ -40,6 +51,9 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: terraform init
 
+      # -------------------------------
+      # Terraform Plan
+      # -------------------------------
       - name: Terraform Plan
         env:
           ARM_SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
